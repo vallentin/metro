@@ -158,7 +158,7 @@ pub enum Event<'a> {
 
 /// *Test function that is being converted into an iterator.*
 pub fn _print_events(events: &[Event<'_>]) {
-    let mut tracks = vec![];
+    let mut tracks = vec![0];
 
     for event in events {
         use Event::*;
