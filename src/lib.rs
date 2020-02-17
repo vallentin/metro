@@ -118,13 +118,15 @@ pub enum Event<'a> {
     /// The rails are joined towards the leftmost rail.
     ///
     /// - If `from_track_id` does not exist, then it turns into a `NoEvent`.
+    /// - If `to_track_id` does not exist, then it turns into `StopTrack(from_track_id)`.
+    /// - If `from_track_id` and `to_track_id` are the same, then it turns into `StopTrack(from_track_id)`
     ///
     /// The track ID (`from_track_id`) can be reused for
     /// a new track after this event.
     ///
     /// ## Output Example
     ///
-    /// Given 3 tracks `0, 1, 2` then `SplitTrack(1, 0)` would render as:
+    /// Given 3 tracks `0, 1, 2` then `JoinTrack(1, 0)` would render as:
     ///
     /// ```text
     /// | | |
@@ -161,7 +163,7 @@ pub fn _print_events(events: &[Event<'_>]) {
     for event in events {
         use Event::*;
         match event {
-            StartTrack(track_id) => {
+            &StartTrack(track_id) => {
                 if !tracks.contains(&track_id) {
                     tracks.push(track_id);
 
@@ -174,12 +176,12 @@ pub fn _print_events(events: &[Event<'_>]) {
                 }
             }
 
-            StartTracks(track_ids) => {
+            &StartTracks(track_ids) => {
                 let mut render = false;
 
                 for track_id in track_ids.iter() {
-                    if !tracks.contains(&track_id) {
-                        tracks.push(track_id);
+                    if !tracks.contains(track_id) {
+                        tracks.push(*track_id);
 
                         render = true;
                     }
@@ -195,36 +197,11 @@ pub fn _print_events(events: &[Event<'_>]) {
                 }
             }
 
-            StopTrack(track_id) => {
-                if let Some(index) = tracks.iter().position(|&id| id == track_id) {
-                    let line = (0..tracks.len())
-                        .map(|i| if i == index { "\"" } else { "|" })
-                        .collect::<Vec<_>>()
-                        .join(" ");
-
-                    println!("{}", line);
-
-                    if index != (tracks.len() - 1) {
-                        let line = (0..tracks.len())
-                            .map(|i| {
-                                use std::cmp::Ordering::*;
-                                match i.cmp(&index) {
-                                    Greater => "/",
-                                    Equal => "",
-                                    Less => "|",
-                                }
-                            })
-                            .collect::<Vec<_>>()
-                            .join(" ");
-
-                        println!("{}", line);
-                    }
-
-                    tracks.remove(index);
-                }
+            &StopTrack(track_id) => {
+                print_stop_track(&mut tracks, track_id);
             }
 
-            Station(track_id, station_name) => {
+            &Station(track_id, station_name) => {
                 let line = tracks
                     .iter()
                     .map(|&id| if id == track_id { "*" } else { "|" })
@@ -234,7 +211,7 @@ pub fn _print_events(events: &[Event<'_>]) {
                 println!("{} {}", line, station_name);
             }
 
-            SplitTrack(from_track_id, new_track_id) => {
+            &SplitTrack(from_track_id, new_track_id) => {
                 if !tracks.contains(&new_track_id) {
                     let mut from_track_index = None;
 
@@ -264,8 +241,13 @@ pub fn _print_events(events: &[Event<'_>]) {
                 }
             }
 
-            JoinTrack(from_track_id, to_track_id) => {
+            &JoinTrack(from_track_id, to_track_id) => {
                 let from_track_index = tracks.iter().position(|&id| id == from_track_id);
+
+                if from_track_id == to_track_id {
+                    print_stop_track(&mut tracks, from_track_id);
+                    return;
+                }
 
                 if let Some(from_track_index) = from_track_index {
                     let to_track_index = tracks.iter().position(|&id| id == to_track_id);
@@ -318,9 +300,11 @@ pub fn _print_events(events: &[Event<'_>]) {
 
                             println!("{}", line);
                         }
-                    }
 
-                    tracks.remove(from_track_index);
+                        tracks.remove(from_track_index);
+                    } else {
+                        print_stop_track(&mut tracks, from_track_id);
+                    }
                 }
             }
 
@@ -333,5 +317,34 @@ pub fn _print_events(events: &[Event<'_>]) {
                 println!("{}", line);
             }
         }
+    }
+}
+
+fn print_stop_track(tracks: &mut Vec<usize>, track_id: usize) {
+    if let Some(index) = tracks.iter().position(|&id| id == track_id) {
+        let line = (0..tracks.len())
+            .map(|i| if i == index { "\"" } else { "|" })
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        println!("{}", line);
+
+        if index != (tracks.len() - 1) {
+            let line = (0..tracks.len())
+                .map(|i| {
+                    use std::cmp::Ordering::*;
+                    match i.cmp(&index) {
+                        Greater => "/",
+                        Equal => "",
+                        Less => "|",
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" ");
+
+            println!("{}", line);
+        }
+
+        tracks.remove(index);
     }
 }
