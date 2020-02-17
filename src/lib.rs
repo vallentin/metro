@@ -46,6 +46,24 @@ pub enum Event<'a> {
     /// ```
     StartTracks(&'a [usize]),
 
+    /// `StopTrack(track_id)`
+    ///
+    /// - If `track_id` does not exist, then this event does nothing.
+    ///
+    /// All rails to the right of `track_id`, are pulled to the left.
+    ///
+    /// ## Output Example
+    ///
+    /// Given 3 tracks `0, 1, 2` then `StopTrack(1)` would render as:
+    ///
+    /// ```text
+    /// | | |
+    /// | " |
+    /// |  /
+    /// | |
+    /// ```
+    StopTrack(usize),
+
     /// `Station(track_id, text)`
     ///
     /// - If the `track_id` does not exist, then `text` is still
@@ -174,6 +192,35 @@ pub fn _print_events(events: &[Event<'_>]) {
                         .join(" ");
 
                     println!("{}", line);
+                }
+            }
+
+            StopTrack(track_id) => {
+                if let Some(index) = tracks.iter().position(|&id| id == track_id) {
+                    let line = (0..tracks.len())
+                        .map(|i| if i == index { "\"" } else { "|" })
+                        .collect::<Vec<_>>()
+                        .join(" ");
+
+                    println!("{}", line);
+
+                    if index != (tracks.len() - 1) {
+                        let line = (0..tracks.len())
+                            .map(|i| {
+                                use std::cmp::Ordering::*;
+                                match i.cmp(&index) {
+                                    Greater => "/",
+                                    Equal => "",
+                                    Less => "|",
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                            .join(" ");
+
+                        println!("{}", line);
+                    }
+
+                    tracks.remove(index);
                 }
             }
 
