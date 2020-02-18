@@ -6,7 +6,11 @@
 #![deny(missing_debug_implementations)]
 #![warn(clippy::all)]
 
+use std::error;
+use std::fmt;
+use std::io::{self, Write};
 use std::iter;
+use std::string::FromUtf8Error;
 
 /// `Event`
 #[derive(Debug)]
@@ -156,8 +160,18 @@ pub enum Event<'a> {
     NoEvent,
 }
 
-/// *Test function that is being converted into an iterator.*
-pub fn _print_events(events: &[Event<'_>]) {
+/// Write `&[`[`Event`]`]` to [`<W: io::Write>`].
+/// Defines a default track with `track_id` of `0`.
+///
+/// *See also [`to_string`] and [`to_vec`].*
+///
+/// [`to_vec`]: fn.to_vec.html
+/// [`to_string`]: fn.to_string.html
+///
+/// [`Event`]: enum.Event.html
+///
+/// [`<W: io::Write>`]: https://doc.rust-lang.org/stable/std/io/trait.Write.html
+pub fn to_writer<W: Write>(mut writer: W, events: &[Event]) -> Result<(), Error> {
     let mut tracks = vec![0];
 
     for event in events {
@@ -172,7 +186,7 @@ pub fn _print_events(events: &[Event<'_>]) {
                         .collect::<Vec<_>>()
                         .join(" ");
 
-                    println!("{}", line);
+                    writeln!(&mut writer, "{}", line)?;
                 }
             }
 
@@ -193,13 +207,11 @@ pub fn _print_events(events: &[Event<'_>]) {
                         .collect::<Vec<_>>()
                         .join(" ");
 
-                    println!("{}", line);
+                    writeln!(&mut writer, "{}", line)?;
                 }
             }
 
-            &StopTrack(track_id) => {
-                print_stop_track(&mut tracks, track_id);
-            }
+            &StopTrack(track_id) => stop_track(&mut writer, &mut tracks, track_id)?,
 
             &Station(track_id, station_name) => {
                 let line = tracks
@@ -208,7 +220,7 @@ pub fn _print_events(events: &[Event<'_>]) {
                     .collect::<Vec<_>>()
                     .join(" ");
 
-                println!("{} {}", line, station_name);
+                writeln!(&mut writer, "{} {}", line, station_name)?;
             }
 
             &SplitTrack(from_track_id, new_track_id) => {
@@ -231,7 +243,7 @@ pub fn _print_events(events: &[Event<'_>]) {
                         .collect::<Vec<_>>()
                         .join(" ");
 
-                    println!("{}", line);
+                    writeln!(&mut writer, "{}", line)?;
 
                     if let Some(index) = from_track_index {
                         tracks.insert(index + 1, new_track_id);
@@ -245,8 +257,8 @@ pub fn _print_events(events: &[Event<'_>]) {
                 let from_track_index = tracks.iter().position(|&id| id == from_track_id);
 
                 if from_track_id == to_track_id {
-                    print_stop_track(&mut tracks, from_track_id);
-                    return;
+                    stop_track(&mut writer, &mut tracks, from_track_id)?;
+                    continue;
                 }
 
                 if let Some(from_track_index) = from_track_index {
@@ -272,7 +284,7 @@ pub fn _print_events(events: &[Event<'_>]) {
                                 .collect::<Vec<_>>()
                                 .join(" ");
 
-                            println!("{}", line);
+                            writeln!(&mut writer, "{}", line)?;
                         } else {
                             let line = (0..tracks.len())
                                 .filter_map(|i| {
@@ -291,19 +303,19 @@ pub fn _print_events(events: &[Event<'_>]) {
                                 .collect::<Vec<_>>()
                                 .concat();
 
-                            println!("{}", line);
+                            writeln!(&mut writer, "{}", line)?;
 
                             let line = (0..(tracks.len() - 1))
                                 .map(|i| if i == left_index { "|/" } else { "| " })
                                 .collect::<Vec<_>>()
                                 .concat();
 
-                            println!("{}", line);
+                            writeln!(&mut writer, "{}", line)?;
                         }
 
                         tracks.remove(from_track_index);
                     } else {
-                        print_stop_track(&mut tracks, from_track_id);
+                        stop_track(&mut writer, &mut tracks, from_track_id)?;
                     }
                 }
             }
@@ -314,20 +326,26 @@ pub fn _print_events(events: &[Event<'_>]) {
                     .collect::<Vec<_>>()
                     .join(" ");
 
-                println!("{}", line);
+                writeln!(&mut writer, "{}", line)?;
             }
         }
     }
+
+    Ok(())
 }
 
-fn print_stop_track(tracks: &mut Vec<usize>, track_id: usize) {
+fn stop_track<W: Write>(
+    mut writer: W,
+    tracks: &mut Vec<usize>,
+    track_id: usize,
+) -> Result<(), Error> {
     if let Some(index) = tracks.iter().position(|&id| id == track_id) {
         let line = (0..tracks.len())
             .map(|i| if i == index { "\"" } else { "|" })
             .collect::<Vec<_>>()
             .join(" ");
 
-        println!("{}", line);
+        writeln!(&mut writer, "{}", line)?;
 
         if index != (tracks.len() - 1) {
             let line = (0..tracks.len())
@@ -342,9 +360,100 @@ fn print_stop_track(tracks: &mut Vec<usize>, track_id: usize) {
                 .collect::<Vec<_>>()
                 .join(" ");
 
-            println!("{}", line);
+            writeln!(&mut writer, "{}", line)?;
         }
 
         tracks.remove(index);
+    }
+
+    Ok(())
+}
+
+/// Write `&[`[`Event`]`]` to [`Vec<u8>`].
+/// Defines a default track with `track_id` of `0`.
+///
+/// *See also [`to_string`] and [`to_writer`].*
+///
+/// [`to_writer`]: fn.to_writer.html
+/// [`to_string`]: fn.to_string.html
+///
+/// [`Event`]: enum.Event.html
+///
+/// [`Vec<u8>`]: https://doc.rust-lang.org/stable/std/vec/struct.Vec.html
+#[inline]
+pub fn to_vec(events: &[Event]) -> Result<Vec<u8>, Error> {
+    let mut vec = Vec::new();
+    to_writer(&mut vec, events)?;
+    Ok(vec)
+}
+
+/// Write `&[`[`Event`]`]` to [`String`].
+/// Defines a default track with `track_id` of `0`.
+///
+/// *See also [`to_vec`] and [`to_writer`].*
+///
+/// [`to_writer`]: fn.to_writer.html
+/// [`to_vec`]: fn.to_vec.html
+///
+/// [`Event`]: enum.Event.html
+///
+/// [`String`]: https://doc.rust-lang.org/stable/std/string/struct.String.html
+#[inline]
+pub fn to_string(events: &[Event]) -> Result<String, Error> {
+    let vec = to_vec(events)?;
+    Ok(String::from_utf8(vec)?)
+}
+
+/// `Error` is an error that can be returned by
+/// [`to_string`], [`to_vec`], and [`to_writer`].
+///
+/// [`to_writer`]: fn.to_writer.html
+/// [`to_vec`]: fn.to_vec.html
+/// [`to_string`]: fn.to_string.html
+#[derive(Debug)]
+pub enum Error {
+    /// [See `std::io::Error`][io::Error].
+    ///
+    /// [io::Error]: https://doc.rust-lang.org/std/io/struct.Error.html
+    IoError(io::Error),
+
+    /// [See `std::string::FromUtf8Error`][FromUtf8Error].
+    ///
+    /// [FromUtf8Error]: https://doc.rust-lang.org/std/string/struct.FromUtf8Error.html
+    FromUtf8Error(FromUtf8Error),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        use Error::*;
+        match self {
+            IoError(err) => err.fmt(fmt),
+            FromUtf8Error(err) => err.fmt(fmt),
+        }
+    }
+}
+
+impl error::Error for Error {
+    #[inline]
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        use Error::*;
+        match self {
+            IoError(ref err) => Some(err),
+            FromUtf8Error(ref err) => Some(err),
+        }
+    }
+}
+
+impl From<io::Error> for Error {
+    #[inline]
+    fn from(err: io::Error) -> Self {
+        Self::IoError(err)
+    }
+}
+
+impl From<FromUtf8Error> for Error {
+    #[inline]
+    fn from(err: FromUtf8Error) -> Self {
+        Self::FromUtf8Error(err)
     }
 }
