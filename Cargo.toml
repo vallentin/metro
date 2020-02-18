@@ -3,9 +3,9 @@ name = "metro"
 version = "0.1.0"
 authors = ["Christian Vallentin"]
 edition = "2018"
-# TODO: description
-# TODO: keywords
-# TODO: categories
+description = "Metro is a crate for rendering graphs similar to `git log --graph`"
+keywords = ["pretty-printing", "cli", "print"]
+categories = ["algorithms", "command-line-interface", "visualization", "rendering"]
 license = "MIT"
 repository = "https://github.com/vallentin/metro"
 documentation = "https://docs.rs/metro"

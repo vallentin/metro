@@ -1,4 +1,4 @@
-//! Metro
+//! Metro is a crate for rendering graphs similar to `git log --graph`.
 //!
 //! # Example
 //!
