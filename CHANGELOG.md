@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 0.1.1 (2020-02-??)
+## Version 0.1.1 (2020-02-19)
 
 - Added `Metro`, and `Track`
 - Fixed `Event::JoinTrack` producing extra whitespace at the end
