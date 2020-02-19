@@ -300,8 +300,17 @@ pub fn to_writer<W: Write>(mut writer: W, events: &[Event]) -> Result<(), Error>
 
                             writeln!(&mut writer, "{}", line)?;
 
-                            let line = (0..(tracks.len() - 1))
-                                .map(|i| if i == left_index { "|/" } else { "| " })
+                            let track_count = tracks.len() - 1;
+                            let line = (0..track_count)
+                                .map(|i| {
+                                    if i == left_index {
+                                        "|/"
+                                    } else if i == (track_count - 1) {
+                                        "|"
+                                    } else {
+                                        "| "
+                                    }
+                                })
                                 .collect::<Vec<_>>()
                                 .concat();
 
