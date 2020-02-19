@@ -32,8 +32,6 @@
 //!     JoinTrack(3, 0),
 //!     Station(2, "Station 15"),
 //!     StopTrack(2),
-//!     NoEvent,
-//!     JoinTrack(1, 0),
 //!     Station(0, "Station 16"),
 //! ];
 //!
@@ -72,7 +70,6 @@
 //! |/|
 //! | * Station 15
 //! | "
-//! |
 //! * Station 16
 //! ```
 

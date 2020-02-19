@@ -5,7 +5,7 @@ use std::iter;
 use std::string::FromUtf8Error;
 
 /// `Event`
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Event<'a> {
     /// `StartTrack(track_id)`
     ///
@@ -113,7 +113,7 @@ pub enum Event<'a> {
     ///
     /// The rails are joined towards the leftmost rail.
     ///
-    /// - If `from_track_id` does not exist, then it turns into a `NoEvent`.
+    /// - If `from_track_id` does not exist, then this event does nothing.
     /// - If `to_track_id` does not exist, then it turns into `StopTrack(from_track_id)`.
     /// - If `from_track_id` and `to_track_id` are the same, then it turns into `StopTrack(from_track_id)`
     ///
@@ -450,5 +450,554 @@ impl From<FromUtf8Error> for Error {
     #[inline]
     fn from(err: FromUtf8Error) -> Self {
         Self::FromUtf8Error(err)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::to_string;
+    use super::Event::*;
+
+    #[test]
+    fn start_track() {
+        let events = [StartTrack(1)];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(string, "| |\n");
+    }
+
+    #[test]
+    fn start_track_already_exists() {
+        let events = [StartTrack(0)];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(string, "");
+    }
+
+    #[test]
+    fn start_track_already_exists2() {
+        #[rustfmt::skip]
+        let events = [
+            StartTrack(1),
+            StartTrack(2),
+            StartTrack(1),
+            StartTrack(2),
+        ];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(string, "| |\n| | |\n");
+    }
+
+    #[test]
+    fn start_track_default() {
+        let events = [StartTrack(0)];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(string, "");
+    }
+
+    #[test]
+    fn event_start_track_default2() {
+        let events = [StartTrack(1)];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(string, "| |\n");
+    }
+
+    #[test]
+    fn event_start_tracks() {
+        let events = [StartTracks(&[1, 2, 3])];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(string, "| | | |\n");
+    }
+
+    #[test]
+    fn start_tracks_some_already_exist() {
+        let events = [StartTracks(&[0, 1, 2])];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(string, "| | |\n");
+    }
+
+    #[test]
+    fn start_tracks_all_already_exist() {
+        let events = [StartTracks(&[0, 0, 0])];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(string, "");
+    }
+
+    #[test]
+    fn stop_track() {
+        let events = [StopTrack(0)];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(string, "\"\n");
+    }
+
+    #[test]
+    fn stop_track_does_not_exist() {
+        let events = [StopTrack(1)];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(string, "");
+    }
+
+    #[test]
+    fn stop_track_left() {
+        #[rustfmt::skip]
+        let events = [
+            StartTracks(&[0, 1, 2, 3, 4]),
+            StopTrack(0),
+            NoEvent,
+        ];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(
+            string,
+            r#"| | | | |
+" | | | |
+ / / / /
+| | | |
+"#
+        );
+    }
+
+    #[test]
+    fn stop_track_middle() {
+        #[rustfmt::skip]
+        let events = [
+            StartTracks(&[0, 1, 2, 3, 4]),
+            StopTrack(2),
+            NoEvent,
+        ];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(
+            string,
+            r#"| | | | |
+| | " | |
+| |  / /
+| | | |
+"#
+        );
+    }
+
+    #[test]
+    fn stop_track_right() {
+        #[rustfmt::skip]
+        let events = [
+            StartTracks(&[0, 1, 2, 3, 4]),
+            StopTrack(4),
+            NoEvent,
+        ];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(
+            string,
+            r#"| | | | |
+| | | | "
+| | | |
+"#
+        );
+    }
+
+    #[test]
+    fn station() {
+        let events = [
+            StartTracks(&[0, 1, 2]),
+            Station(0, "Station 1"),
+            Station(1, "Station 2"),
+            Station(2, "Station 3"),
+            Station(0, "Station 4"),
+            Station(1, "Station 5"),
+            Station(2, "Station 6"),
+        ];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(
+            string,
+            r#"| | |
+* | | Station 1
+| * | Station 2
+| | * Station 3
+* | | Station 4
+| * | Station 5
+| | * Station 6
+"#
+        );
+    }
+
+    #[test]
+    fn station_non_existing_track() {
+        let events = [
+            StartTracks(&[0, 1, 2]),
+            Station(0, "Station 1"),
+            Station(1, "Station 2"),
+            Station(2, "Station 3"),
+            Station(3, "Station 4"),
+            Station(4, "Station 5"),
+            Station(5, "Station 6"),
+            Station(std::usize::MAX, "Station 7"),
+        ];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(
+            string,
+            r#"| | |
+* | | Station 1
+| * | Station 2
+| | * Station 3
+| | | Station 4
+| | | Station 5
+| | | Station 6
+| | | Station 7
+"#
+        );
+    }
+
+    #[test]
+    fn split_track() {
+        let events = [
+            SplitTrack(0, 1),
+            NoEvent,
+            SplitTrack(0, 2),
+            SplitTrack(1, 3),
+            SplitTrack(3, 4),
+        ];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(
+            string,
+            r#"|\
+| |
+|\ \
+| | |\
+| | | |\
+"#
+        );
+    }
+
+    #[test]
+    fn split_track_non_existing_from_track() {
+        let events1 = [
+            SplitTrack(1, 2),
+            SplitTrack(3, 4),
+            Station(2, "2"),
+            Station(4, "4"),
+        ];
+        let events2 = [
+            StartTrack(2),
+            StartTrack(4),
+            Station(2, "2"),
+            Station(4, "4"),
+        ];
+
+        let string1 = to_string(&events1).unwrap();
+        let string2 = to_string(&events2).unwrap();
+
+        assert_eq!(string1, string2);
+    }
+
+    #[test]
+    fn split_track_already_existing_new_track() {
+        let events1 = [
+            StartTracks(&[0, 1, 2]),
+            SplitTrack(0, 1),
+            SplitTrack(0, 2),
+            SplitTrack(3, 4),
+            Station(0, "0"),
+            Station(1, "1"),
+            Station(2, "2"),
+            Station(3, "3"),
+            Station(4, "4"),
+        ];
+        let events2 = [
+            StartTracks(&[0, 1, 2]),
+            StartTrack(4),
+            Station(0, "0"),
+            Station(1, "1"),
+            Station(2, "2"),
+            Station(3, "3"),
+            Station(4, "4"),
+        ];
+
+        let string1 = to_string(&events1).unwrap();
+        let string2 = to_string(&events2).unwrap();
+
+        assert_eq!(string1, string2);
+    }
+
+    #[test]
+    fn split_track_same_from_and_new_track() {
+        let events = [SplitTrack(0, 0)];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(string, "");
+
+        #[rustfmt::skip]
+        let events1 = [
+            StartTracks(&[0, 1, 2]),
+            SplitTrack(1, 1),
+            SplitTrack(0, 2),
+        ];
+        let events2 = [StartTracks(&[0, 1, 2])];
+
+        let string1 = to_string(&events1).unwrap();
+        let string2 = to_string(&events2).unwrap();
+
+        assert_eq!(string1, string2);
+    }
+
+    #[test]
+    fn join_track_zero_between() {
+        #[rustfmt::skip]
+        let events = [
+            StartTracks(&[0, 1, 2]),
+            JoinTrack(1, 0),
+            NoEvent,
+        ];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(
+            string,
+            r#"| | |
+|/ /
+| |
+"#
+        );
+    }
+
+    #[test]
+    fn join_track_one_between() {
+        #[rustfmt::skip]
+        let events = [
+            StartTracks(&[0, 1, 2]),
+            JoinTrack(2, 0),
+            NoEvent,
+        ];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(
+            string,
+            r#"| | |
+| |/
+|/|
+| |
+"#
+        );
+    }
+
+    #[test]
+    fn join_track_many_between() {
+        #[rustfmt::skip]
+        let events = [
+            StartTracks(&[0, 1, 2, 3, 4]),
+            JoinTrack(4, 0),
+            NoEvent,
+        ];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(
+            string,
+            r#"| | | | |
+| |_|_|/
+|/| | |
+| | | |
+"#
+        );
+    }
+
+    #[test]
+    fn join_track_always_leftmost() {
+        let events1 = [
+            StartTracks(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+            JoinTrack(4, 1),
+            JoinTrack(5, 0),
+            JoinTrack(8, 7),
+            JoinTrack(9, 6),
+            NoEvent,
+        ];
+
+        let events2 = events1
+            .iter()
+            .cloned()
+            .map(|event| match event {
+                JoinTrack(from, to) => JoinTrack(to, from),
+                _ => event,
+            })
+            .collect::<Vec<_>>();
+
+        let string1 = to_string(&events1).unwrap();
+        let string2 = to_string(&events2).unwrap();
+
+        // Note these only visually looks the same,
+        // the actual deleted track is not the same.
+        assert_eq!(string1, string2);
+    }
+
+    // The above `join_track` tests are all `existing_from_track_existing_to_track`
+
+    #[test]
+    fn join_track_non_existing_from_track_existing_to_track() {
+        let events1 = [
+            StartTracks(&[0, 1, 2, 3, 4]),
+            JoinTrack(5, 0),
+            JoinTrack(10, 1),
+        ];
+        let events2 = [StartTracks(&[0, 1, 2, 3, 4])];
+
+        let string1 = to_string(&events1).unwrap();
+        let string2 = to_string(&events2).unwrap();
+
+        assert_eq!(string1, string2);
+    }
+
+    #[test]
+    fn join_track_non_existing_from_track_non_existing_to_track() {
+        let events1 = [
+            StartTracks(&[0, 1, 2, 3, 4]),
+            JoinTrack(5, 6),
+            JoinTrack(10, 11),
+        ];
+        let events2 = [StartTracks(&[0, 1, 2, 3, 4])];
+
+        let string1 = to_string(&events1).unwrap();
+        let string2 = to_string(&events2).unwrap();
+
+        assert_eq!(string1, string2);
+    }
+
+    #[test]
+    fn join_track_existing_from_track_non_existing_to_track() {
+        let events1 = [
+            StartTracks(&[0, 1, 2, 3, 4]),
+            JoinTrack(0, 5),
+            JoinTrack(2, 10),
+        ];
+        #[rustfmt::skip]
+        let events2 = [
+            StartTracks(&[0, 1, 2, 3, 4]),
+            StopTrack(0),
+            StopTrack(2),
+        ];
+
+        let string1 = to_string(&events1).unwrap();
+        let string2 = to_string(&events2).unwrap();
+
+        assert_eq!(string1, string2);
+    }
+
+    #[test]
+    fn join_track_same_from_and_to_track() {
+        let events1 = [
+            StartTracks(&[0, 1, 2, 3, 4]),
+            JoinTrack(0, 0),
+            JoinTrack(2, 2),
+            JoinTrack(10, 10),
+        ];
+        #[rustfmt::skip]
+        let events2 = [
+            StartTracks(&[0, 1, 2, 3, 4]),
+            StopTrack(0),
+            StopTrack(2),
+        ];
+
+        let string1 = to_string(&events1).unwrap();
+        let string2 = to_string(&events2).unwrap();
+
+        assert_eq!(string1, string2);
+    }
+
+    #[test]
+    fn no_event() {
+        let events = [NoEvent, NoEvent, NoEvent];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(string, "|\n|\n|\n");
+
+        #[rustfmt::skip]
+        let events = [
+            StartTracks(&[0, 1, 2]),
+            NoEvent,
+            NoEvent,
+            NoEvent,
+        ];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(string, "| | |\n| | |\n| | |\n| | |\n");
+    }
+
+    #[test]
+    fn lib_example() {
+        // If this example is changed, then update both `events`
+        // and the output in lib.rs.
+        let events = [
+            Station(0, "Station 1"),
+            Station(0, "Station 2"),
+            NoEvent,
+            Station(0, "Station 3"),
+            SplitTrack(0, 1),
+            Station(1, "Station 4"),
+            SplitTrack(1, 2),
+            Station(1, "Station 5"),
+            Station(2, "Station 6"),
+            NoEvent,
+            Station(0, "Station 7"),
+            Station(1, "Station 8"),
+            Station(2, "Station 9"),
+            SplitTrack(2, 3),
+            SplitTrack(3, 4),
+            Station(5, "Station 10"),
+            JoinTrack(4, 0),
+            Station(3, "Station 11"),
+            StopTrack(1),
+            NoEvent,
+            Station(0, "Station 12"),
+            Station(2, "Station 13"),
+            Station(3, "Station 14"),
+            JoinTrack(5, 0),
+            JoinTrack(3, 0),
+            Station(2, "Station 15"),
+            StopTrack(2),
+            Station(0, "Station 16"),
+        ];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(
+            string,
+            r#"* Station 1
+* Station 2
+|
+* Station 3
+|\
+| * Station 4
+| |\
+| * | Station 5
+| | * Station 6
+| | |
+* | | Station 7
+| * | Station 8
+| | * Station 9
+| | |\
+| | | |\
+| | | | | Station 10
+| |_|_|/
+|/| | |
+| | | * Station 11
+| " | |
+|  / /
+| | |
+* | | Station 12
+| * | Station 13
+| | * Station 14
+| |/
+|/|
+| * Station 15
+| "
+* Station 16
+"#
+        )
     }
 }
