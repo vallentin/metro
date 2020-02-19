@@ -47,7 +47,7 @@ type RcMetro<'a> = Rc<RefCell<MetroState<'a>>>;
 /// track3.add_station("Station 9");
 ///
 /// let mut track4 = track3.split();
-/// let mut track5 = track4.split();
+/// let track5 = track4.split();
 ///
 /// metro.add_station("Station 10 (Detached)");
 ///
@@ -557,5 +557,126 @@ impl<'a> MetroState<'a> {
     #[inline]
     fn add_event(metro: &RcMetro<'a>, event: Event<'a>) {
         metro.borrow_mut().events.push(event);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{to_string, Event::*, Metro};
+
+    #[test]
+    fn lib_example() {
+        // If this example is changed, then update both `events`
+        // and the output in lib.rs, events.rs, and metro.rs.
+
+        // TODO: Currently not including `NoEvent` as `Metro`
+        // TODO: does not have an equivalent
+        let events = [
+            Station(0, "Station 1"),
+            Station(0, "Station 2"),
+            // NoEvent,
+            Station(0, "Station 3"),
+            SplitTrack(0, 1),
+            Station(1, "Station 4"),
+            SplitTrack(1, 2),
+            Station(1, "Station 5"),
+            Station(2, "Station 6"),
+            // NoEvent,
+            Station(0, "Station 7"),
+            Station(1, "Station 8"),
+            Station(2, "Station 9"),
+            SplitTrack(2, 3),
+            SplitTrack(3, 4),
+            Station(5, "Station 10 (Detached)"),
+            JoinTrack(4, 0),
+            Station(3, "Station 11"),
+            StopTrack(1),
+            // NoEvent,
+            Station(0, "Station 12"),
+            Station(2, "Station 13"),
+            Station(3, "Station 14"),
+            JoinTrack(3, 0),
+            Station(2, "Station 15"),
+            StopTrack(2),
+            Station(0, "Station 16"),
+        ];
+        let string1 = to_string(&events).unwrap();
+
+        assert_eq!(
+            string1,
+            r#"* Station 1
+* Station 2
+* Station 3
+|\
+| * Station 4
+| |\
+| * | Station 5
+| | * Station 6
+* | | Station 7
+| * | Station 8
+| | * Station 9
+| | |\
+| | | |\
+| | | | | Station 10 (Detached)
+| |_|_|/
+|/| | |
+| | | * Station 11
+| " | |
+|  / /
+* | | Station 12
+| * | Station 13
+| | * Station 14
+| |/
+|/|
+| * Station 15
+| "
+* Station 16
+"#
+        );
+
+        let mut metro = Metro::new();
+
+        let mut track1 = metro.new_track();
+        track1.add_station("Station 1");
+        track1.add_station("Station 2");
+        track1.add_station("Station 3");
+
+        let mut track2 = track1.split();
+        track2.add_station("Station 4");
+
+        let mut track3 = track2.split();
+        track2.add_station("Station 5");
+        track3.add_station("Station 6");
+
+        track1.add_station("Station 7");
+        track2.add_station("Station 8");
+        track3.add_station("Station 9");
+
+        let mut track4 = track3.split();
+        let track5 = track4.split();
+
+        metro.add_station("Station 10 (Detached)");
+
+        track5.join(&track1);
+
+        track4.add_station("Station 11");
+
+        track2.stop();
+
+        track1.add_station("Station 12");
+        track3.add_station("Station 13");
+        track4.add_station("Station 14");
+
+        track4.join(&track1);
+
+        track3.add_station("Station 15");
+
+        track3.stop();
+
+        track1.add_station("Station 16");
+
+        let string2 = metro.to_string().unwrap();
+
+        assert_eq!(string1, string2);
     }
 }
