@@ -217,30 +217,33 @@ pub fn to_writer<W: Write>(mut writer: W, events: &[Event]) -> Result<(), Error>
 
             &SplitTrack(from_track_id, new_track_id) => {
                 if !tracks.contains(&new_track_id) {
-                    let mut from_track_index = None;
+                    let from_track_index = tracks.iter().position(|&id| id == from_track_id);
 
-                    let line = tracks
-                        .iter()
-                        .enumerate()
-                        .map(|(i, &id)| {
-                            if from_track_index.is_some() {
-                                "\\"
-                            } else if id == from_track_id {
-                                from_track_index = Some(i);
-                                "|\\"
-                            } else {
-                                "|"
-                            }
-                        })
-                        .collect::<Vec<_>>()
-                        .join(" ");
+                    if let Some(from_track_index) = from_track_index {
+                        let line = (0..tracks.len())
+                            .map(|i| {
+                                use std::cmp::Ordering::*;
+                                match i.cmp(&from_track_index) {
+                                    Greater => "\\",
+                                    Equal => "|\\",
+                                    Less => "|",
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                            .join(" ");
 
-                    writeln!(&mut writer, "{}", line)?;
+                        writeln!(&mut writer, "{}", line)?;
 
-                    if let Some(index) = from_track_index {
-                        tracks.insert(index + 1, new_track_id);
+                        tracks.insert(from_track_index + 1, new_track_id);
                     } else {
                         tracks.push(new_track_id);
+
+                        let line = iter::repeat("|")
+                            .take(tracks.len())
+                            .collect::<Vec<_>>()
+                            .join(" ");
+
+                        writeln!(&mut writer, "{}", line)?;
                     }
                 }
             }
