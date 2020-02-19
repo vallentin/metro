@@ -80,5 +80,7 @@
 #![warn(clippy::all)]
 
 mod events;
+mod metro;
 
+pub use crate::metro::{Metro, Track};
 pub use events::*;
