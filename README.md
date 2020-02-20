@@ -17,6 +17,12 @@ Add this to your `Cargo.toml`:
 metro = "0.1"
 ```
 
+## TODOs
+
+- [ ] Colors and themes
+- [ ] Iterator to stream output line by line
+- [ ] `git log --graph` example
+
 ## Releases
 
 Release notes are available in the repo at [CHANGELOG.md].
