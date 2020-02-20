@@ -17,12 +17,6 @@ type RcMetro<'a> = Rc<RefCell<MetroState<'a>>>;
 /// [`Track`]: struct.Track.html
 /// [`Event`]: enum.Event.html
 ///
-/// *If you have a need for [`Arc`] then feel free to submit
-/// an issue on the [issue tracker] with your use case.*
-///
-/// [issue tracker]: https://github.com/vallentin/metro/issues
-/// [`Arc`]: https://doc.rust-lang.org/std/sync/struct.Arc.html
-///
 /// # Example
 ///
 /// ```no_run
@@ -105,6 +99,29 @@ type RcMetro<'a> = Rc<RefCell<MetroState<'a>>>;
 /// | "
 /// * Station 16
 /// ```
+///
+/// # Internally
+///
+/// `Metro` and [`Track`] uses an [`Rc`]`<`[`RefCell`]`<MetroState>>`
+/// internally to keep track of everything, such that `Metro` and
+/// [`Track`] can supply a more friendly way of constructing graphs.
+///
+/// [`Rc`]: https://doc.rust-lang.org/stable/std/rc/struct.Rc.html
+/// [`RefCell`]: https://doc.rust-lang.org/stable/std/cell/struct.RefCell.html
+///
+/// If you are able to trigger a [`BorrowError`] or
+/// [`BorrowMutError`], then please submit an issue on
+/// the [issue tracker], with a snippet to reproduce
+/// the error.
+///
+/// [`BorrowError`]: https://doc.rust-lang.org/stable/std/cell/struct.BorrowError.html
+/// [`BorrowMutError`]: https://doc.rust-lang.org/stable/std/cell/struct.BorrowMutError.html
+///
+/// Additionally, if you have a need for [`Arc`] then feel free to submit
+/// an issue on the [issue tracker] with your use case.
+///
+/// [issue tracker]: https://github.com/vallentin/metro/issues
+/// [`Arc`]: https://doc.rust-lang.org/std/sync/struct.Arc.html
 #[allow(missing_debug_implementations)]
 pub struct Metro<'a> {
     state: RcMetro<'a>,
