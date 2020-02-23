@@ -1,10 +1,10 @@
 use std::cell::RefCell;
 use std::fmt;
-use std::io::Write;
+use std::io::{self, Write};
 use std::mem;
 use std::rc::Rc;
 
-use crate::events::{to_string, to_vec, to_writer, Error, Event};
+use crate::events::{to_string, to_vec, to_writer, Event};
 
 type RcMetro<'a> = Rc<RefCell<MetroState<'a>>>;
 
@@ -209,7 +209,7 @@ impl<'a> Metro<'a> {
     ///
     /// [`to_writer`]: fn.to_writer.html
     #[inline]
-    pub fn to_writer<W: Write>(&self, writer: W) -> Result<(), Error> {
+    pub fn to_writer<W: Write>(&self, writer: W) -> io::Result<()> {
         let state = self.state.borrow();
         to_writer(writer, &state.events)
     }
@@ -218,7 +218,7 @@ impl<'a> Metro<'a> {
     ///
     /// [`to_vec`]: fn.to_vec.html
     #[inline]
-    pub fn to_vec(&self) -> Result<Vec<u8>, Error> {
+    pub fn to_vec(&self) -> io::Result<Vec<u8>> {
         let state = self.state.borrow();
         to_vec(&state.events)
     }
@@ -227,8 +227,7 @@ impl<'a> Metro<'a> {
     ///
     /// [`to_string`]: fn.to_string.html
     #[inline]
-    pub fn to_string(&self) -> Result<String, Error> {
-        // MetroState::to_string(&self.state)
+    pub fn to_string(&self) -> io::Result<String> {
         let state = self.state.borrow();
         to_string(&state.events)
     }

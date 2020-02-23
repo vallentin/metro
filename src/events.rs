@@ -1,8 +1,5 @@
-use std::error;
-use std::fmt;
 use std::io::{self, Write};
 use std::iter;
-use std::string::FromUtf8Error;
 
 /// `Event`s are produced automatically by using [`Metro`],
 /// but can also be created and used manually.
@@ -242,7 +239,7 @@ pub enum Event<'a> {
 /// [`Metro::to_writer`]: struct.Metro.html#method.to_writer
 ///
 /// [`<W: io::Write>`]: https://doc.rust-lang.org/stable/std/io/trait.Write.html
-pub fn to_writer<W: Write>(mut writer: W, events: &[Event]) -> Result<(), Error> {
+pub fn to_writer<W: Write>(mut writer: W, events: &[Event]) -> io::Result<()> {
     let mut tracks = vec![0];
 
     for event in events {
@@ -417,11 +414,7 @@ pub fn to_writer<W: Write>(mut writer: W, events: &[Event]) -> Result<(), Error>
     Ok(())
 }
 
-fn stop_track<W: Write>(
-    mut writer: W,
-    tracks: &mut Vec<usize>,
-    track_id: usize,
-) -> Result<(), Error> {
+fn stop_track<W: Write>(mut writer: W, tracks: &mut Vec<usize>, track_id: usize) -> io::Result<()> {
     if let Some(index) = tracks.iter().position(|&id| id == track_id) {
         let line = (0..tracks.len())
             .map(|i| if i == index { "\"" } else { "|" })
@@ -468,7 +461,7 @@ fn stop_track<W: Write>(
 ///
 /// [`Vec<u8>`]: https://doc.rust-lang.org/stable/std/vec/struct.Vec.html
 #[inline]
-pub fn to_vec(events: &[Event]) -> Result<Vec<u8>, Error> {
+pub fn to_vec(events: &[Event]) -> io::Result<Vec<u8>> {
     let mut vec = Vec::new();
     to_writer(&mut vec, events)?;
     Ok(vec)
@@ -490,7 +483,7 @@ pub fn to_vec(events: &[Event]) -> Result<Vec<u8>, Error> {
 ///
 /// [`String`]: https://doc.rust-lang.org/stable/std/string/struct.String.html
 #[inline]
-pub fn to_string(events: &[Event]) -> Result<String, Error> {
+pub fn to_string(events: &[Event]) -> io::Result<String> {
     let vec = to_vec(events)?;
     // Ok(String::from_utf8(vec)?)
     // Metro only writes `str`s and `String`s to the `vec`
@@ -501,6 +494,7 @@ pub fn to_string(events: &[Event]) -> Result<String, Error> {
     }
 }
 
+/*
 /// `Error` is an error that can be returned by
 /// [`to_string`], [`to_vec`], and [`to_writer`].
 ///
@@ -554,6 +548,7 @@ impl From<FromUtf8Error> for Error {
         Self::FromUtf8Error(err)
     }
 }
+// */
 
 #[cfg(test)]
 mod tests {
