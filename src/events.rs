@@ -492,7 +492,13 @@ pub fn to_vec(events: &[Event]) -> Result<Vec<u8>, Error> {
 #[inline]
 pub fn to_string(events: &[Event]) -> Result<String, Error> {
     let vec = to_vec(events)?;
-    Ok(String::from_utf8(vec)?)
+    // Ok(String::from_utf8(vec)?)
+    // Metro only writes `str`s and `String`s to the `vec`
+    // which are always valid UTF-8, so this is safe.
+    #[allow(unsafe_code)]
+    unsafe {
+        Ok(String::from_utf8_unchecked(vec))
+    }
 }
 
 /// `Error` is an error that can be returned by
