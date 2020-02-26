@@ -92,7 +92,6 @@ pub enum Event<'a> {
     /// ```text
     /// | | |
     /// | | | |
-    /// | | | |
     /// ```
     StartTrack(usize),
 
@@ -109,7 +108,6 @@ pub enum Event<'a> {
     ///
     /// ```text
     /// | | |
-    /// | | | | |
     /// | | | | |
     /// ```
     StartTracks(&'a [usize]),

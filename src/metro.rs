@@ -154,6 +154,15 @@ impl<'a> Metro<'a> {
     /// Panics if more than [`usize`] tracks have been created.
     ///
     /// [`usize`]: https://doc.rust-lang.org/stable/std/primitive.usize.html
+    ///
+    /// ## Output Example
+    ///
+    /// Given 3 existing tracks then `new_track` would render as:
+    ///
+    /// ```text
+    /// | | |
+    /// | | | |
+    /// ```
     #[inline]
     pub fn new_track(&mut self) -> Track<'a> {
         let id = self.state.borrow_mut().next_id();
@@ -178,6 +187,15 @@ impl<'a> Metro<'a> {
     /// Panics if more than [`usize`] tracks have been created.
     ///
     /// [`usize`]: https://doc.rust-lang.org/stable/std/primitive.usize.html
+    ///
+    /// ## Output Example
+    ///
+    /// Given 3 existing tracks then `new_track_with_id` would render as:
+    ///
+    /// ```text
+    /// | | |
+    /// | | | |
+    /// ```
     #[inline]
     pub fn new_track_with_id(&mut self, track_id: usize) -> Track<'a> {
         MetroState::new_track(&self.state, track_id)
@@ -200,6 +218,16 @@ impl<'a> Metro<'a> {
     /// [`Track::add_station`]: struct.Track.html#method.add_station
     ///
     /// [`std::usize::MAX`]: https://doc.rust-lang.org/stable/std/usize/constant.MAX.html
+    ///
+    /// ## Output Example
+    ///
+    /// Given 3 existing tracks then `add_station("Hello World")` would render as:
+    ///
+    /// ```text
+    /// | | |
+    /// | | | Hello World
+    /// | | |
+    /// ```
     #[inline]
     pub fn add_station(&mut self, text: &'a str) {
         MetroState::add_event(&self.state, Event::Station(std::usize::MAX, text));
@@ -312,6 +340,17 @@ impl<'a> Track<'a> {
     /// [`Metro`]: struct.Metro.html
     /// [`new_track_with_id`]: struct.Metro.html#method.new_track_with_id
     /// [`get_track`]: struct.Metro.html#method.get_track
+    ///
+    /// ## Output Example
+    ///
+    /// Given 3 existing tracks then calling `stop()` on the middle track would render as:
+    ///
+    /// ```text
+    /// | | |
+    /// | " |
+    /// |  /
+    /// | |
+    /// ```
     #[inline]
     pub fn stop(self) {
         // Method is empty as the logic is implemented in Drop for Track
@@ -323,6 +362,16 @@ impl<'a> Track<'a> {
     /// tied to a `Track`.
     ///
     /// [`Metro::add_station`]: struct.Metro.html#method.add_station
+    ///
+    /// ## Output Example
+    ///
+    /// Given 3 existing tracks then `add_station("Hello World")` on the middle track would render as:
+    ///
+    /// ```text
+    /// | | |
+    /// | * | Hello World
+    /// | | |
+    /// ```
     #[inline]
     pub fn add_station(&mut self, text: &'a str) {
         MetroState::add_event(&self.state, Event::Station(self.id, text));
@@ -340,6 +389,16 @@ impl<'a> Track<'a> {
     /// Panics if more than [`usize`] tracks have been created.
     ///
     /// [`usize`]: https://doc.rust-lang.org/stable/std/primitive.usize.html
+    ///
+    /// ## Output Example
+    ///
+    /// Given 3 existing tracks then calling `split` on the middle track would render as:
+    ///
+    /// ```text
+    /// | | |
+    /// | |\ \
+    /// | | | |
+    /// ```
     #[inline]
     pub fn split(&self) -> Track<'a> {
         let id = self.state.borrow_mut().next_id();
@@ -358,6 +417,16 @@ impl<'a> Track<'a> {
     /// Panics if more than [`usize`] tracks have been created.
     ///
     /// [`usize`]: https://doc.rust-lang.org/stable/std/primitive.usize.html
+    ///
+    /// ## Output Example
+    ///
+    /// Given 3 existing tracks then calling `split` on the middle track would render as:
+    ///
+    /// ```text
+    /// | | |
+    /// | |\ \
+    /// | | | |
+    /// ```
     #[inline]
     pub fn split_with_id(&self, new_track_id: usize) -> Track<'a> {
         MetroState::split_track(&self.state, self, new_track_id)
@@ -367,6 +436,27 @@ impl<'a> Track<'a> {
     /// the [`Metro`].
     ///
     /// [`Metro`]: struct.Metro.html
+    ///
+    /// ## Output Example
+    ///
+    /// Given 3 existing tracks, then calling join on the middle
+    /// track with the leftmost track would render as:
+    ///
+    /// ```text
+    /// | | |
+    /// |/ /
+    /// | |
+    /// ```
+    ///
+    /// Given 6 existing tracks, then calling join on the second
+    /// rightmost track with the leftmost track would render as:
+    ///
+    /// ```text
+    /// | | | | | |
+    /// | |_|_|/ /
+    /// |/| | | |
+    /// | | | | |
+    /// ```
     #[inline]
     pub fn join(self, to_track: &Track) {
         MetroState::join_track(&self.state, &self, to_track);
