@@ -478,11 +478,11 @@ impl<'a> Track<'a> {
     /// # use metro::Metro;
     /// let mut metro = Metro::new();
     ///
-    /// // Create a new track with track id `0`
-    /// let mut track1 = metro.new_track_with_id(0);
+    /// // Create a new track
+    /// let mut track1 = metro.new_track();
     ///
-    /// // Get a second reference to the track with track id `0`
-    /// let mut track2 = metro.get_track(0).unwrap();
+    /// // Get a second reference to the same track
+    /// let mut track2 = metro.get_track(track1.id()).unwrap();
     ///
     /// // They represent the same track, so `is_dangling` returns `false` for both
     /// assert!(!track1.is_dangling());
@@ -497,7 +497,9 @@ impl<'a> Track<'a> {
     /// assert!(track2.is_dangling());
     ///
     /// // Create a new track that uses the same track id `0`
-    /// let mut track3 = metro.new_track_with_id(0);
+    ///
+    /// // Create a new track with the same track id as `track2`
+    /// let mut track3 = metro.new_track_with_id(track2.id());
     ///
     /// // Now `track2` and `track3` represent the same track,
     /// // so `is_dangling` again returns `false` for both
@@ -644,6 +646,7 @@ impl<'a> MetroState<'a> {
     }
 
     /// The caller must consume `from_track`.
+    /// The caller must not produce `Event::StopTrack`.
     #[inline]
     fn join_track(metro: &RcMetro<'a>, from_track: &Track, to_track: &Track) {
         let from_track_id = from_track.id();
