@@ -772,6 +772,48 @@ mod tests {
     }
 
     #[test]
+    fn station_multiple_lines() {
+        let events = [
+            StartTracks(&[0, 1, 2]),
+            Station(0, "Foo 0\nBar 0\r\nBaz 0"),
+            Station(1, "Foo 1\nBar 1\r\nBaz 1"),
+            Station(2, "Foo 2\nBar 2\r\nBaz 2"),
+            Station(3, "Foo 3\nBar 3\r\nBaz 3"),
+            Station(4, "Foo 4\nBar 4\r\nBaz 4"),
+            Station(5, "Foo 5\nBar 5\r\nBaz 5"),
+            Station(std::usize::MAX, "Foo MAX\nBar MAX\r\nBaz MAX"),
+        ];
+        let string = to_string(&events).unwrap();
+
+        assert_eq!(
+            string,
+            r#"| | |
+* | | Foo 0
+| | | Bar 0
+| | | Baz 0
+| * | Foo 1
+| | | Bar 1
+| | | Baz 1
+| | * Foo 2
+| | | Bar 2
+| | | Baz 2
+| | | Foo 3
+| | | Bar 3
+| | | Baz 3
+| | | Foo 4
+| | | Bar 4
+| | | Baz 4
+| | | Foo 5
+| | | Bar 5
+| | | Baz 5
+| | | Foo MAX
+| | | Bar MAX
+| | | Baz MAX
+"#
+        );
+    }
+
+    #[test]
     fn split_track() {
         let events = [
             SplitTrack(0, 1),
