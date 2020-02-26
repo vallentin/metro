@@ -651,16 +651,20 @@ impl<'a> MetroState<'a> {
     fn join_track(metro: &RcMetro<'a>, from_track: &Track, to_track: &Track) {
         let from_track_id = from_track.id();
 
+        // Whether either track already stopped existing does not matter
+        // as `to_string` handles rendering and resolving "edge cases".
         MetroState::add_event(metro, Event::JoinTrack(from_track_id, to_track.id()));
 
         let mut state = metro.borrow_mut();
-        let index = state
+
+        // If `from_track` `is_dangling` then it has already been removed from `tracks`
+        if let Some(index) = state
             .tracks
             .iter()
             .position(|track| track.id == from_track_id)
-            // Safe to use `unwrap` as `from_track` always exists at this point
-            .unwrap();
-        state.tracks.remove(index);
+        {
+            state.tracks.remove(index);
+        }
     }
 
     #[inline]
