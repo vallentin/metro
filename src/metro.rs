@@ -228,6 +228,16 @@ impl<'a> Metro<'a> {
     /// | | | Hello World
     /// | | |
     /// ```
+    ///
+    /// Text with multiple lines is also allowed.
+    /// Given 3 existing tracks then `add_station("Hello\nWorld")` would render as:
+    ///
+    /// ```text
+    /// | | |
+    /// | | | Hello
+    /// | | | World
+    /// | | |
+    /// ```
     #[inline]
     pub fn add_station(&mut self, text: &'a str) {
         MetroState::add_event(&self.state, Event::Station(std::usize::MAX, text));
@@ -370,6 +380,16 @@ impl<'a> Track<'a> {
     /// ```text
     /// | | |
     /// | * | Hello World
+    /// | | |
+    /// ```
+    ///
+    /// Text with multiple lines is also allowed.
+    /// Given 3 existing tracks then `add_station("Hello\nWorld")` would render as:
+    ///
+    /// ```text
+    /// | | |
+    /// | * | Hello
+    /// | | | World
     /// | | |
     /// ```
     #[inline]

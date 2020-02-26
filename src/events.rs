@@ -145,6 +145,16 @@ pub enum Event<'a> {
     /// | | |
     /// ```
     ///
+    /// Text with multiple lines is also allowed.
+    /// Given 3 tracks `0, 1, 2` then `Station(1, "Hello\nWorld")` would render as:
+    ///
+    /// ```text
+    /// | | |
+    /// | * | Hello
+    /// | | | World
+    /// | | |
+    /// ```
+    ///
     /// If the `track_id` does not exist, then no rail is highlighted.
     /// Thus `Station(10, "Hello World")` would render as:
     ///
@@ -280,13 +290,22 @@ pub fn to_writer<W: Write>(mut writer: W, events: &[Event]) -> io::Result<()> {
             &StopTrack(track_id) => stop_track(&mut writer, &mut tracks, track_id)?,
 
             &Station(track_id, station_name) => {
-                let line = tracks
+                let mut line = tracks
                     .iter()
                     .map(|&id| if id == track_id { "*" } else { "|" })
                     .collect::<Vec<_>>()
                     .join(" ");
 
-                writeln!(&mut writer, "{} {}", line, station_name)?;
+                for (i, station_name) in station_name.lines().enumerate() {
+                    if i == 1 {
+                        line = iter::repeat("|")
+                            .take(tracks.len())
+                            .collect::<Vec<_>>()
+                            .join(" ");
+                    }
+
+                    writeln!(&mut writer, "{} {}", line, station_name)?;
+                }
             }
 
             &SplitTrack(from_track_id, new_track_id) => {
