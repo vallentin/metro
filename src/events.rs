@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::{self, Write};
 use std::iter;
 
@@ -12,33 +13,33 @@ use std::iter;
 /// # Example
 ///
 /// ```no_run
-/// use metro::Event::*;
+/// use metro::Event;
 ///
 /// let events = [
-///     Station(0, "Station 1"),
-///     Station(0, "Station 2"),
-///     Station(0, "Station 3"),
-///     SplitTrack(0, 1),
-///     Station(1, "Station 4"),
-///     SplitTrack(1, 2),
-///     Station(1, "Station 5"),
-///     Station(2, "Station 6"),
-///     Station(0, "Station 7"),
-///     Station(1, "Station 8"),
-///     Station(2, "Station 9"),
-///     SplitTrack(2, 3),
-///     SplitTrack(3, 4),
-///     Station(5, "Station 10 (Detached)"),
-///     JoinTrack(4, 0),
-///     Station(3, "Station 11"),
-///     StopTrack(1),
-///     Station(0, "Station 12"),
-///     Station(2, "Station 13"),
-///     Station(3, "Station 14"),
-///     JoinTrack(3, 0),
-///     Station(2, "Station 15"),
-///     StopTrack(2),
-///     Station(0, "Station 16"),
+///     Event::station(0, "Station 1"),
+///     Event::station(0, "Station 2"),
+///     Event::station(0, "Station 3"),
+///     Event::SplitTrack(0, 1),
+///     Event::station(1, "Station 4"),
+///     Event::SplitTrack(1, 2),
+///     Event::station(1, "Station 5"),
+///     Event::station(2, "Station 6"),
+///     Event::station(0, "Station 7"),
+///     Event::station(1, "Station 8"),
+///     Event::station(2, "Station 9"),
+///     Event::SplitTrack(2, 3),
+///     Event::SplitTrack(3, 4),
+///     Event::station(5, "Station 10 (Detached)"),
+///     Event::JoinTrack(4, 0),
+///     Event::station(3, "Station 11"),
+///     Event::StopTrack(1),
+///     Event::station(0, "Station 12"),
+///     Event::station(2, "Station 13"),
+///     Event::station(3, "Station 14"),
+///     Event::JoinTrack(3, 0),
+///     Event::station(2, "Station 15"),
+///     Event::StopTrack(2),
+///     Event::station(0, "Station 16"),
 /// ];
 ///
 /// let string = metro::to_string(&events).unwrap();
@@ -163,7 +164,7 @@ pub enum Event<'a> {
     /// | | | Hello World
     /// | | |
     /// ```
-    Station(usize, &'a str),
+    Station(usize, Cow<'a, str>),
 
     /// `SplitTrack(from_track_id, new_track_id)`
     ///
@@ -232,6 +233,16 @@ pub enum Event<'a> {
     NoEvent,
 }
 
+impl<'a> Event<'a> {
+    /// *[See `Event::Station` for more information.][`Event::Station`]*
+    ///
+    /// [`Event::Station`]: enum.Event.html#variant.Station
+    #[inline]
+    pub fn station<S: Into<Cow<'a, str>>>(track_id: usize, text: S) -> Self {
+        Self::Station(track_id, text.into())
+    }
+}
+
 /// Write `&[`[`Event`]`]` to [`<W: io::Write>`].
 /// Defines a default track with `track_id` of `0`.
 ///
@@ -289,10 +300,10 @@ pub fn to_writer<W: Write>(mut writer: W, events: &[Event]) -> io::Result<()> {
 
             &StopTrack(track_id) => stop_track(&mut writer, &mut tracks, track_id)?,
 
-            &Station(track_id, station_name) => {
+            Station(track_id, station_name) => {
                 let mut line = tracks
                     .iter()
-                    .map(|&id| if id == track_id { "*" } else { "|" })
+                    .map(|&id| if id == *track_id { "*" } else { "|" })
                     .collect::<Vec<_>>()
                     .join(" ");
 
@@ -569,6 +580,8 @@ impl From<FromUtf8Error> for Error {
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
+
     use super::to_string;
     use super::Event::*;
 
@@ -721,12 +734,12 @@ mod tests {
     fn station() {
         let events = [
             StartTracks(&[0, 1, 2]),
-            Station(0, "Station 1"),
-            Station(1, "Station 2"),
-            Station(2, "Station 3"),
-            Station(0, "Station 4"),
-            Station(1, "Station 5"),
-            Station(2, "Station 6"),
+            Station(0, Cow::Borrowed("Station 1")),
+            Station(1, Cow::Borrowed("Station 2")),
+            Station(2, Cow::Borrowed("Station 3")),
+            Station(0, Cow::Borrowed("Station 4")),
+            Station(1, Cow::Borrowed("Station 5")),
+            Station(2, Cow::Borrowed("Station 6")),
         ];
         let string = to_string(&events).unwrap();
 
@@ -747,13 +760,13 @@ mod tests {
     fn station_non_existing_track() {
         let events = [
             StartTracks(&[0, 1, 2]),
-            Station(0, "Station 1"),
-            Station(1, "Station 2"),
-            Station(2, "Station 3"),
-            Station(3, "Station 4"),
-            Station(4, "Station 5"),
-            Station(5, "Station 6"),
-            Station(std::usize::MAX, "Station 7"),
+            Station(0, Cow::Borrowed("Station 1")),
+            Station(1, Cow::Borrowed("Station 2")),
+            Station(2, Cow::Borrowed("Station 3")),
+            Station(3, Cow::Borrowed("Station 4")),
+            Station(4, Cow::Borrowed("Station 5")),
+            Station(5, Cow::Borrowed("Station 6")),
+            Station(std::usize::MAX, Cow::Borrowed("Station 7")),
         ];
         let string = to_string(&events).unwrap();
 
@@ -775,13 +788,16 @@ mod tests {
     fn station_multiple_lines() {
         let events = [
             StartTracks(&[0, 1, 2]),
-            Station(0, "Foo 0\nBar 0\r\nBaz 0"),
-            Station(1, "Foo 1\nBar 1\r\nBaz 1"),
-            Station(2, "Foo 2\nBar 2\r\nBaz 2"),
-            Station(3, "Foo 3\nBar 3\r\nBaz 3"),
-            Station(4, "Foo 4\nBar 4\r\nBaz 4"),
-            Station(5, "Foo 5\nBar 5\r\nBaz 5"),
-            Station(std::usize::MAX, "Foo MAX\nBar MAX\r\nBaz MAX"),
+            Station(0, Cow::Borrowed("Foo 0\nBar 0\r\nBaz 0")),
+            Station(1, Cow::Borrowed("Foo 1\nBar 1\r\nBaz 1")),
+            Station(2, Cow::Borrowed("Foo 2\nBar 2\r\nBaz 2")),
+            Station(3, Cow::Borrowed("Foo 3\nBar 3\r\nBaz 3")),
+            Station(4, Cow::Borrowed("Foo 4\nBar 4\r\nBaz 4")),
+            Station(5, Cow::Borrowed("Foo 5\nBar 5\r\nBaz 5")),
+            Station(
+                std::usize::MAX,
+                Cow::Borrowed("Foo MAX\nBar MAX\r\nBaz MAX"),
+            ),
         ];
         let string = to_string(&events).unwrap();
 
@@ -840,14 +856,14 @@ mod tests {
         let events1 = [
             SplitTrack(1, 2),
             SplitTrack(3, 4),
-            Station(2, "2"),
-            Station(4, "4"),
+            Station(2, Cow::Borrowed("2")),
+            Station(4, Cow::Borrowed("4")),
         ];
         let events2 = [
             StartTrack(2),
             StartTrack(4),
-            Station(2, "2"),
-            Station(4, "4"),
+            Station(2, Cow::Borrowed("2")),
+            Station(4, Cow::Borrowed("4")),
         ];
 
         let string1 = to_string(&events1).unwrap();
@@ -863,20 +879,20 @@ mod tests {
             SplitTrack(0, 1),
             SplitTrack(0, 2),
             SplitTrack(3, 4),
-            Station(0, "0"),
-            Station(1, "1"),
-            Station(2, "2"),
-            Station(3, "3"),
-            Station(4, "4"),
+            Station(0, Cow::Borrowed("0")),
+            Station(1, Cow::Borrowed("1")),
+            Station(2, Cow::Borrowed("2")),
+            Station(3, Cow::Borrowed("3")),
+            Station(4, Cow::Borrowed("4")),
         ];
         let events2 = [
             StartTracks(&[0, 1, 2]),
             StartTrack(4),
-            Station(0, "0"),
-            Station(1, "1"),
-            Station(2, "2"),
-            Station(3, "3"),
-            Station(4, "4"),
+            Station(0, Cow::Borrowed("0")),
+            Station(1, Cow::Borrowed("1")),
+            Station(2, Cow::Borrowed("2")),
+            Station(3, Cow::Borrowed("3")),
+            Station(4, Cow::Borrowed("4")),
         ];
 
         let string1 = to_string(&events1).unwrap();
