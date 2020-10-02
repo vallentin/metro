@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::fmt;
 use std::io::{self, Write};
@@ -239,8 +240,8 @@ impl<'a> Metro<'a> {
     /// | | |
     /// ```
     #[inline]
-    pub fn add_station(&mut self, text: &'a str) {
-        MetroState::add_event(&self.state, Event::Station(std::usize::MAX, text));
+    pub fn add_station<S: Into<Cow<'a, str>>>(&mut self, text: S) {
+        MetroState::add_event(&self.state, Event::station(std::usize::MAX, text));
     }
 
     /// *[See `to_writer`.][`to_writer`]*
@@ -393,8 +394,8 @@ impl<'a> Track<'a> {
     /// | | |
     /// ```
     #[inline]
-    pub fn add_station(&mut self, text: &'a str) {
-        MetroState::add_event(&self.state, Event::Station(self.id, text));
+    pub fn add_station<S: Into<Cow<'a, str>>>(&mut self, text: S) {
+        MetroState::add_event(&self.state, Event::station(self.id, text));
     }
 
     /// Create a new `Track` that branches of from this track.
@@ -695,43 +696,48 @@ impl<'a> MetroState<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{to_string, Event::*, Metro};
+    use super::{to_string, Event, Event::*, Metro};
 
     #[test]
     fn lib_example() {
         // If this example is changed, then update both `events`
         // and the output in lib.rs, events.rs, and metro.rs.
 
+        #[inline]
+        fn station(track_id: usize, text: &str) -> Event {
+            Event::station(track_id, text)
+        }
+
         // TODO: Currently not including `NoEvent` as `Metro`
         // TODO: does not have an equivalent
         let events = [
-            Station(0, "Station 1"),
-            Station(0, "Station 2"),
+            station(0, "Station 1"),
+            station(0, "Station 2"),
             // NoEvent,
-            Station(0, "Station 3"),
+            station(0, "Station 3"),
             SplitTrack(0, 1),
-            Station(1, "Station 4"),
+            station(1, "Station 4"),
             SplitTrack(1, 2),
-            Station(1, "Station 5"),
-            Station(2, "Station 6"),
+            station(1, "Station 5"),
+            station(2, "Station 6"),
             // NoEvent,
-            Station(0, "Station 7"),
-            Station(1, "Station 8"),
-            Station(2, "Station 9"),
+            station(0, "Station 7"),
+            station(1, "Station 8"),
+            station(2, "Station 9"),
             SplitTrack(2, 3),
             SplitTrack(3, 4),
-            Station(5, "Station 10 (Detached)"),
+            station(5, "Station 10 (Detached)"),
             JoinTrack(4, 0),
-            Station(3, "Station 11"),
+            station(3, "Station 11"),
             StopTrack(1),
             // NoEvent,
-            Station(0, "Station 12"),
-            Station(2, "Station 13"),
-            Station(3, "Station 14"),
+            station(0, "Station 12"),
+            station(2, "Station 13"),
+            station(3, "Station 14"),
             JoinTrack(3, 0),
-            Station(2, "Station 15"),
+            station(2, "Station 15"),
             StopTrack(2),
-            Station(0, "Station 16"),
+            station(0, "Station 16"),
         ];
         let string1 = to_string(&events).unwrap();
 
