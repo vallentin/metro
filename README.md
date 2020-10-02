@@ -9,6 +9,8 @@
 Metro is a crate for creating and rendering graphs
 similar to `git log --graph`.
 
+For a `git log --graph` example, see [examples/git2.rs](examples/git2.rs).
+
 ## Usage
 
 Add this to your `Cargo.toml`:
@@ -22,7 +24,6 @@ metro = "0.1"
 
 - [ ] Colors and themes
 - [ ] Iterator to stream output line by line
-- [ ] `git log --graph` example
 
 ## Releases
 
