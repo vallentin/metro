@@ -16,3 +16,6 @@ exclude = [".travis.yml"]
 travis-ci = { repository = "vallentin/metro" }
 
 [dependencies]
+
+[dev-dependencies]
+git2 = "0.13"
